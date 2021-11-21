@@ -1,4 +1,3 @@
-#!C:\xampp\htdocs\PHP\other\php.exe.
 <?php
 
 use Minicli\App;
@@ -10,12 +9,32 @@ if (PHP_SAPI_name() !== 'cli') {
 require __DIR__ . '/vendor/autoload.php';
 
 $app = new App();
+/*
+$message = 'Hi';
+$say = function () use ($message) {
+    $message = 'Hello';
+    echo $message;
+};
 
+$say();
+
+echo $message;
+
+public function registerCommand(string $name, callable $callable)
+{
+    $this->registry[$name] = $callable;
+}
+*/
 // Register command "hello"
-$app->registerCommand('hello', function (array $argv) use ($app) {
-    $name = isset($argv[2]) ? $argv[2] : "World";
-    $app->getPrinter()->display("Hello $name!!!");
-});
+// "use" construct is used to access $app variable from the outer/parent scope
+// By default, the variable is passed by value, not by reference
+$app->registerCommand(
+    'hello', // string $name
+    function (array $argv) use ($app) { // callable $callable
+        $name = isset($argv[2]) ? $argv[2] : "World"; // ok
+        $app->getPrinter()->display("Hello $name!!!"); //ok
+    }
+);
 
 // Register command "help"
 $app->registerCommand('help', function (array $argv) use ($app) {
