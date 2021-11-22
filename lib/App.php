@@ -4,81 +4,74 @@ namespace Minicli;
 
 class App
 {
-    /**
-     * Property that references CliPrinter object
-     * @var CliPrinter 
-     */
     protected $printer;
 
-    /**
-     * Stores the application commands as anonymous function
-     * @param array
-     */
-    protected $registry = [];
+    protected $command_registry;
+
+    protected $app_signature;
 
     public function __construct()
     {
         $this->printer = new CliPrinter();
+        $this->command_registry = new CommandRegistry(__DIR__ . '/../app/Command');
     }
 
-    /**
-     * Get the printer object
-     * 
-     * @return object $printer
-     */
     public function getPrinter()
     {
         return $this->printer;
     }
 
-    /**
-     * Stores application commands as anonymous functions identified by name
-     * 
-     * @param string $name Function name
-     * @param callable $callable anonymous function
-     */
-    public function registerCommand(string $name, callable $callable)
+    public function getSignature()
     {
-        $this->registry[$name] = $callable;
+        return $this->app_signature;
     }
 
-    public function getCommand($command)
+    public function printSignature()
     {
-        return isset($this->registry[$command]) ? $this->registry[$command] : null;
+        $this->getPrinter()->display(sprintf("usage: %s", $this->getSignature()));
     }
 
-    /**
-     * Displays a message
-     * 
-     * @param array $argv (Optional) Input array
-     * 
-     * @return void
-     */
+    public function setSignature($app_signature)
+    {
+        $this->app_signature = $app_signature;
+    }
+
+
+    public function registerCommand($name, $callable)
+    {
+        $this->command_registry->registerCommand($name, $callable);
+    }
+
     public function runCommand(array $argv = [])
     {
-        // $name = "World";
+        $input = new CommandCall($argv);
 
-        // Default command, will be executed if no commad is set
-        $command_name = "help";
-
-        // Check if $argv[1] is set to a registered command name
-        if (isset($argv[1])) {
-            // $name = $argv[1];
-            $command_name = $argv[1];
-        }
-
-        $command = $this->getCommand($command_name);
-        if ($command === null) {
-            $this->getPrinter()
-                ->display("ERROR: Command \"$command_name\" not found.");
+        if (count($input->args) < 2) {
+            $this->printSignature();
             exit;
         }
 
-        call_user_func($command, $argv);
+        $controller = $this->command_registry->getCallableController($input->command, $input->subcommand);
 
-        // print_r(get_defined_vars());
+        if ($controller instanceof CommandController) {
+            $controller->boot($this);
+            $controller->run($input);
+            $controller->teardown();
+            exit;
+        }
 
-        // echo "Hello $name!!!\n";
-        // $this->getPrinter()->display("Hello $name!!!");
+        $this->runSingle($input);
+    }
+
+    protected function runSingle(CommandCall $input)
+    {
+        try {
+            $callable = $this->command_registry->getCallable($input->command);
+            call_user_func($callable, $input);
+        } catch (\Exception $e) {
+            $this->getPrinter()->display("ERROR: " . $e->getMessage());
+            $this->printSignature();
+            exit;
+        }
     }
 }

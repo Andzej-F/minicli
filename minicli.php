@@ -1,44 +1,65 @@
+#!/usr/bin/php
 <?php
 
-use Minicli\App;
-
-if (PHP_SAPI_name() !== 'cli') {
+if (php_sapi_name() !== 'cli') {
     exit;
 }
 
 require __DIR__ . '/vendor/autoload.php';
 
+use Minicli\App;
+
 $app = new App();
-/*
-$message = 'Hi';
-$say = function () use ($message) {
-    $message = 'Hello';
-    echo $message;
-};
-
-$say();
-
-echo $message;
-
-public function registerCommand(string $name, callable $callable)
+/*public function registerController($name, CommandController $controller)
+    {
+        $this->command_registry->registerController($name, $controller);
+    } 
+    
+    abstract class CommandController
 {
-    $this->registry[$name] = $callable;
-}
-*/
-// Register command "hello"
-// "use" construct is used to access $app variable from the outer/parent scope
-// By default, the variable is passed by value, not by reference
+    protected $app;
+
+    abstract public function run($argv);
+
+    public function __construct(App $app)
+    {
+        $this->app = $app;
+    }
+
+    protected function getApp()
+    {
+        return $this->app;
+    }
+}*/
+$app->registerController('hello', new \App\Command\HelloController($app));
+
+$app->registerCommand('help', function (array $argv) use ($app) {
+    $app->getPrinter()->display("usage: minicli hello [ your-name ]");
+});
+
+
+// Register command "hyphenate"
 $app->registerCommand(
-    'hello', // string $name
-    function (array $argv) use ($app) { // callable $callable
-        $name = isset($argv[2]) ? $argv[2] : "World"; // ok
-        $app->getPrinter()->display("Hello $name!!!"); //ok
+    'hyphenate',
+    function (array $argv) use ($app) {
+        $hyphenate = isset($argv[2]) ? $argv[2] : "Enter a word or a command "; // ok
+        $app->getPrinter()->display("!Hyp=hen-ated-word!!"); //ok
     }
 );
 
-// Register command "help"
-$app->registerCommand('help', function (array $argv) use ($app) {
-    $app->getPrinter()->display("usage:minicli hello [your-name]");
-});
+// Register command "exit"
+$app->registerCommand(
+    'exit',
+    function (array $argv) use ($app) {
+        $exit = isset($argv[2]) ? $argv[2] : "Enter a command"; // ok
+        $app->getPrinter()->display($exit); //ok
+    }
+);
 
 $app->runCommand($argv);
+
+// command [ subcommand ] [ action ] [ params ]
+// command [ subcommand 1 ] [ subcommand n ] [ params ]
+
+// docker image [ import | build | history | ls | pull | prune ... ]
+// docker container [ build | info | kill | pause | rename | rm ... ]
